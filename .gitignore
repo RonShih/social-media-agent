@@ -1,0 +1,13 @@
+browser_profiles/
+.playwright-mcp/
+media/_tmp/
+media/temp/
+media/assets/
+logs/
+data/
+.DS_Store
+
+# 客戶 / 機器專屬設定（每個 clone 自己生）
+config/secrets.yaml
+config/brand.yaml
+.claude/settings.json
