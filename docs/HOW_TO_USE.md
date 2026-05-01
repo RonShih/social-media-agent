@@ -1,346 +1,69 @@
-# 如何使用這個專案（social-media-agent）
+# 使用手冊
 
-給接手的人 / 廠商看的實戰手冊。讀完可以馬上上手。
-
----
-
-## 這個專案是什麼
-
-社群小編 agent，用 Playwright 開真瀏覽器發文到 5 平台（FB / IG / X / YouTube / TikTok）。透過 Telegram 對 Claude 下指令、或 Claude Code 對話直接打 slash command。
-
-## 兩種使用模式
-
-| 模式 | 時機 | 誰觸發 |
-|---|---|---|
-| **Telegram 模式**（主要）| 日常使用、想對話式 debug | TG 群組打指令給 bot |
-| **直接模式** | 在電腦前 / 第一次設定 | Claude Code 對話打 slash command |
+TG bot 下指令 → Claude 開瀏覽器發到 5 平台（FB / IG / X / YT / TikTok）。
 
 ---
 
-## 初次設定（10 分鐘）
+## 1. TG bot
 
-### 0. 先確認環境
+照官方文件設定：**https://code.claude.com/docs/en/channels**
 
-```bash
-node --version   # >= 18（npx 會用到）
-npm --version    # 可以跑就好
-claude --version # Claude Code 已安裝
-```
-
-沒裝 Node：`brew install node`（macOS）或去 https://nodejs.org。
-
-### 1. 安裝 Claude Code
-從 https://claude.com/claude-code 下載 Desktop 版、登入。
-
-### 2. 設 `~/.claude/settings.json`（使用者層權限）
-
-打開 `~/.claude/settings.json`，貼進：
-
-```json
-{
-  "extraKnownMarketplaces": {
-    "claude-plugins-official": {
-      "source": { "source": "github", "repo": "anthropics/claude-plugins-official" }
-    }
-  },
-  "skipAutoPermissionPrompt": true,
-  "skipDangerousModePermissionPrompt": true,
-  "permissions": {
-    "defaultMode": "bypassPermissions",
-    "allow": [
-      "Bash(curl *)", "Bash(cd *)", "Bash(ls *)", "Bash(mkdir *)", "Bash(rm *)",
-      "Read", "Write", "Edit", "Glob", "Grep",
-      "mcp__playwright__*",
-      "mcp__scheduled-tasks__*"
-    ]
-  }
-}
-```
-
-**Cmd+Q 重啟 Claude Code**（settings 只在啟動時載入）。
-
-### 3. Clone 專案
-```bash
-cd ~/Desktop
-git clone <repo-url>
-cd social-media-agent
-ls config/       # 應該看到 brand.example.yaml（brand.yaml 在 Step 5 由 /setup 產生）
-```
-
-**不用跑 `npm install`** — 專案沒有 `package.json`，所有 Playwright 相關套件靠 `npx` 按需下載。
-
-#### 3.5 複製 settings.json 模板、改絕對路徑
+設完後，啟動指令：
 
 ```bash
+claude --channels plugin:telegram@claude-plugins-official
+```
+
+終端機保持開著 = bot 上線。
+
+---
+
+## 2. Claude 設定（一次）
+
+```bash
+git clone <repo-url> && cd social-media-agent
 cp .claude/settings.example.json .claude/settings.json
-# 把 .claude/settings.json 裡的 <ABSOLUTE_PATH_TO_REPO> 換成這台機器的真實絕對路徑
-# 例：/Users/yourname/path/to/social-media-agent
-```
+# 把 settings.json 內 <ABSOLUTE_PATH_TO_REPO> 換成此 repo 絕對路徑
 
-`.claude/settings.json` 是 gitignored，每台機器自己一份。
-
-### 4. 首次啟動：讓 Playwright 自己裝好
-
-第一次在 Claude Code 裡呼叫任何 Playwright 指令（例如 `/first-time-login`）時，會發生：
-
-```
-Claude Code 讀 .claude/settings.json
-  ↓
-啟動 npx -y @playwright/mcp@latest
-  ↓
-npm 從 registry 下載 @playwright/mcp          ← 約 30 秒、存到 ~/.npm/_npx/
-  ↓
-Playwright 檢查要不要下載 Chromium 執行檔
-  ↓
-若沒有 → 自動下載 Chromium（~150 MB）         ← 1-3 分鐘、存到 ~/Library/Caches/ms-playwright/
-  ↓
-開瀏覽器
-```
-
-**全程自動**，你不用手動 npm install 或下載 Chromium。
-
-若卡在下載或出錯，可以手動加速一次：
-```bash
-npx -y @playwright/mcp@latest --help    # 預先抓 mcp 套件
-npx playwright install chromium          # 預先抓 Chromium
-```
-
-### 4b. 若 `.claude/settings.json` 的 MCP 設定不生效（備援）
-
-有些環境 / Claude Code 版本**不會自動 spawn** 專案層 settings.json 裡的 MCP server（特別是用 CLI 而非 Desktop app 時）。若打開 Claude Code 之後 `/first-time-login` 找不到 `mcp__playwright__*` 工具，改用 CLI **手動註冊**：
-
-```bash
-cd <ABSOLUTE_PATH_TO_REPO>
-
-claude mcp add playwright \
-  -s project \
-  -- npx -y @playwright/mcp@latest \
+# 註冊 user-level Playwright MCP（channel session 不讀專案層 settings）
+claude mcp add playwright -s user -- npx -y @playwright/mcp@latest \
   --user-data-dir <ABSOLUTE_PATH_TO_REPO>/browser_profiles
 ```
 
-選項說明：
-- `-s project` — 註冊在專案層（**別人 clone 也吃這份**，存在 `.mcp.json`）
-- `-s user` — 只註冊在你這台電腦
-- `-s local`（預設）— 只這個目錄、不同步
+`~/.claude/settings.json` 加 `"defaultMode": "bypassPermissions"`，**Cmd+Q 重啟**。
 
-**絕對路徑不能省略**`--user-data-dir`，否則 scheduled task 的 Chromium profile 會錯亂（踩過的坑）。
+進 repo 跑 `claude`，依序：
 
-註冊完確認：
-```bash
-claude mcp list
-# 應看到 playwright: npx -y @playwright/mcp@latest ... - ✓ Connected
-```
-
-若要移除重裝：
-```bash
-claude mcp remove playwright -s project
-```
-
-### 5. 首次登入 5 平台
-在 Claude Code 裡打：
-```
-/first-time-login
-```
-
-Playwright 會開 Chromium（首次可能等 1-3 分鐘下載）→ 依序引導你登入 FB / IG / X / YT / TikTok。登完 cookies 寫進 `browser_profiles/shared/`，之後 routine 靠這個登入狀態。
-
-**登完請關掉 Chromium 視窗**（避免 profile lock）。
-
-### 6. 準備素材
-把圖片、影片放到 `media/assets/`：
-```
-media/assets/
-├── product-photo-1.jpg
-├── product-photo-2.jpg
-├── short-clip.mp4
-└── ...
-```
-
-在 TG 對 bot 發文時可直接指定路徑、或上傳新圖（會自動下載到 `~/.claude/channels/telegram/inbox/`）。
+- `/setup` — 對話式建 `config/brand.yaml`
+- `/first-time-login` — 登 5 平台，登完關 Chromium
+- 素材丟 `media/assets/`
 
 ---
 
-## 日常 workflow
+## 3. 日常使用
 
-主流程：**Telegram bot 觸發**。
+對 TG bot 直接講話：
 
-### 啟動 bot session（每次開機後一次）
-
-開終端機：
-
-```bash
-cd <ABSOLUTE_PATH_TO_REPO>
-claude --channels plugin:telegram@claude-plugins-official
-```
-
-讓這個終端機**一直開著**，bot 才會回應 TG 訊息。Cmd+Q / Ctrl+C 關掉就斷線。
-
-### TG 上的常用指令
-
-| 你在 TG 打 | Claude 會做的事 |
+| 你說 | Claude 做 |
 |---|---|
-| **\[上傳圖\] +** `發 IG，caption: ...` | 圖自動下載、Claude 用 publish-instagram |
-| **\[上傳影片\] +** `發 YT short，title: ...` | 影片下載、Claude 用 publish-youtube |
-| `/publish-now <platform>，caption: ...` | 直接呼叫對應 publish-* skill |
-| `/weekly-report` | 產週報 markdown 到 `reports/<YYYY-WWW>.md` |
+| 上傳圖 + `發 IG，caption: ...` | 起 draft → 你確認 → 發文 |
+| `發 FB+IG，caption: ...` | 多平台並行 |
+| `/publish-now draft:<id>` | 確認某個 draft 發出 |
+| `/weekly-report` | 產 `reports/<YYYY-WWW>.md` |
 | `/analyze-hotspots` | 5 平台熱點分析 |
-| `幫我發到 FB+IG` | Claude 用同個 caption / image 多平台同發 |
-| `FB 剛剛為什麼失敗？` | Claude 看上文記憶解釋 |
-| `再試一次` | Claude 重新跑剛剛的發文 |
+| `/unlock-browser` | 解 Chromium profile lock |
 
-**對話會累積 context**：你問「FB 為什麼失敗」後接著說「再試一次」，Claude 知道指哪一篇。
-
-### 想開新對話（清乾淨 context）
-
-當對話太長想重置：
-
-- **方法 A**：終端機 Ctrl+C → 重啟 `claude --channels ...`
-- **方法 B**：在 Claude session 內打 `/clear`（保留 session、清歷史）
-
-### 替代：直接在 Claude Code 對話下指令
-
-不在 TG 旁邊時，電腦上 cd 進專案、`claude` 進去後一樣的 slash command 也會跑。
-
-⚠️ 已知坑見 [`docs/WARNINGS.md`](./WARNINGS.md)。
+預設兩階段：先 draft 預覽、回 `/publish-now draft:<id>` 才真的發。要直發就講「直接發、不要 draft」。
 
 ---
 
-## Telegram Channel 設定
-
-### 前置條件
-
-- Claude Code v2.1.80+（`claude --version` 確認）
-- 用 claude.ai 帳號登入（不支援 console / API key）
-- 安裝 [Bun](https://bun.sh)：`brew install oven-sh/bun/bun`
-- Team / Enterprise 帳號要 admin 在 settings 開 `channelsEnabled: true`（個人帳號不用）
-- **Playwright MCP 必須裝在 user-level**（channel session 不會讀專案 `.claude/settings.json`）：
-  ```bash
-  claude mcp add playwright -s user -- \
-    npx -y @playwright/mcp@latest \
-    --user-data-dir <ABSOLUTE_PATH_TO_REPO>/browser_profiles
-  ```
-  跑完用 `claude mcp list` 確認看得到 playwright。
-
-### ⚠️ 在哪打 `/plugin` 指令
-
-**只能在 standalone CLI**（終端機跑 `claude` 進入的對話）裡用。**不能在 Claude Desktop 的 Cowork / Chat 嵌入模式裡用** — 會回 `/plugin isn't available in this environment`。
-
-### 設定步驟
-
-#### 1. 申請 Telegram bot token
-
-Telegram 找 **@BotFather**、`/newbot`、取名（username 要以 `bot` 結尾）、拿 token（`7891234567:AAExxx...` 格式）。
-
-#### 2. 安裝官方 telegram plugin
-
-進 Claude Code 對話打：
-
-```
-/plugin marketplace add anthropics/claude-plugins-official
-/plugin install telegram@claude-plugins-official
-/reload-plugins
-```
-
-> 若 marketplace 找不到 → `/plugin marketplace update claude-plugins-official` 再試。
-
-#### 3. 配置 token
-
-```
-/telegram:configure 7891234567:AAExxx...
-```
-
-token 存到 `~/.claude/channels/telegram/.env`。
-
-#### 4. 退出後加 `--channels` 重啟
-
-```bash
-cd <ABSOLUTE_PATH_TO_REPO>
-claude --channels plugin:telegram@claude-plugins-official
-```
-
-#### 5. 配對 TG 帳號（首次）
-
-- TG 找你 bot、傳任何訊息（例：`hi`）
-- bot 回配對碼（`pairing code: ABCD1234`）
-- 在 Claude Code 終端機打：
-  ```
-  /telegram:access pair ABCD1234
-  /telegram:access policy allowlist
-  ```
-
----
-
-## 7 個 slash commands
-
-| Command | 做什麼 | 什麼時候用 |
-|---|---|---|
-| `/setup` | 對話式建立 / 修改 `brand.yaml` | 首次部署 / 換客戶 |
-| `/first-time-login` | 人工登入 5 平台 | 首次 setup / cookie 過期 |
-| `/publish-now` | 直接發指定貼文到指定平台 | 主要發文指令 |
-| `/test-post` | 5 平台各發一則 `test` | 驗收、偵測平台風控 |
-| `/weekly-report` | 產週報 markdown | 週末做總結時 |
-| `/analyze-hotspots` | 5 平台熱點分析 | 想找題材靈感時 |
-| `/unlock-browser` | 解開 Chromium profile lock | publish-* 卡 `profile lock conflict` 時 |
-
----
-
-## 換客戶 / 重用
-
-這個 repo 是**配置驅動**的：所有品牌相關都集中在 `config/brand.yaml`。換客戶 ≈ 換 brand.yaml + 換素材。
-
-### 最快路徑：跑 `/setup` 對話式建立
-
-```bash
-git clone <repo>
-cd <repo>
-claude --channels plugin:telegram@claude-plugins-official
-```
-
-對 Claude 打 `/setup`，逐項回答（公司名、社群帳號、產品 / 服務、調性、禁用詞...）。**5-10 分鐘**寫好 brand.yaml，不用碰 yaml 檔。
-
-接著：
-1. 把素材放進 `media/assets/`
-2. 跑 `/first-time-login` 登入新品牌的 5 平台帳號
-
-### 進階：手動編輯 yaml
-
-```bash
-cp config/brand.example.yaml config/brand.yaml
-vim config/brand.yaml   # 照範本填
-```
-
-### 哪些檔需要動
-
-| 要改什麼 | 改哪 |
-|---|---|
-| 品牌名、語氣、產品、社群、熱點關鍵字 | `config/brand.yaml`（一個檔通吃）或 `/setup` |
-| 素材 | `media/assets/` 換新檔 + 重跑 `/first-time-login` |
-| 平台 UI 改版（FB / IG 改 UI）| 對應 `.claude/skills/publish-*/SKILL.md` |
-| Agent 行為規則 | `CLAUDE.md`（一般不用動 — 已 client-agnostic）|
-
----
-
-## 故障排除速查
+## 故障
 
 | 症狀 | 解法 |
 |---|---|
-| 首次跑很久才開 Chromium | 正常，等 1-3 分鐘下載 |
-| `command not found: npx` | `brew install node` |
-| Playwright "browser not found" | `npx playwright install chromium` |
-| `/first-time-login` 找不到 `mcp__playwright__*` | `claude mcp add playwright -s user -- npx -y @playwright/mcp@latest --user-data-dir <絕對路徑>/browser_profiles` |
-| 一直跳權限提示 | `~/.claude/settings.json` 加 `bypassPermissions`，Cmd+Q 重啟 |
-| 發文後貼文不見（FB / IG）| 平台靜默 block 自動化、間歇性，下次可能過 |
-| Playwright 開新 Chromium 卡住 | profile lock — 關掉手動開的 Chromium 視窗 |
+| 跳權限提示 | `bypassPermissions` 沒設 → §2 |
+| 找不到 `mcp__playwright__*` | 重跑 §2 的 `claude mcp add playwright` |
+| Chromium profile lock | `/unlock-browser` |
+| 發文後貼文不見（FB / IG）| 平台靜默 block，間歇性，重試 |
 
-完整踩過的坑見 `docs/SYSTEM_CHANGES.md` §6。
-
----
-
-## 還有問題？
-
-1. **架構層問題** → `docs/SYSTEM_CHANGES.md`
-2. **品牌語調問題** → `CLAUDE.md`
-3. **某個 skill 的邏輯** → `.claude/skills/<name>/SKILL.md`
-4. **某個 command 的步驟** → `.claude/commands/<name>.md`
-
-這個專案刻意寫得「Markdown 即文件」，所有邏輯都在 Markdown 裡、可以邊改邊讀。
+換客戶 → `/setup` + 換 `media/assets/` + `/first-time-login`。

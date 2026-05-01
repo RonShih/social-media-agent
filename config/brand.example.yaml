@@ -17,7 +17,7 @@ company:
   backup_email: <備用 email（選填）>
   address: <地址（選填）>
   description: |
-    <一段話描述業務 / 主要服務 / 目標客群。給 content-writer 當 context 用。>
+    <一段話描述業務 / 主要服務 / 目標客群。給 draft-* 當 context 用。>
 
 # ───────────────────────────────────────────────
 # 2. 品牌調性
@@ -50,7 +50,7 @@ socials:
     url: <https://x.com/...>
 
 # ───────────────────────────────────────────────
-# 4. 產品線（content-writer 抽樣產文用）
+# 4. 產品線（draft-* 抽樣產文用）
 #   每個產品一個 - block，可有任意多個
 # ───────────────────────────────────────────────
 products:
@@ -66,7 +66,7 @@ products:
   #   name: ...
 
 # ───────────────────────────────────────────────
-# 5. 內容主題（generate-calendar / content-writer 用）
+# 5. 內容主題（draft-* 用）
 # ───────────────────────────────────────────────
 content_themes:
   - <主題 1，例：產品介紹>
@@ -74,32 +74,9 @@ content_themes:
   - <主題 3，例：客戶案例>
 
 # ───────────────────────────────────────────────
-# 6. 熱點分析（/analyze-hotspots 用）
-#   依你的領域調整
-# ───────────────────────────────────────────────
-hotspot:
-  # 命中 +10 分（核心領域）
-  hard_keywords:
-    - <核心關鍵字 1>
-    - <核心關鍵字 2>
-
-  # 命中 +5 分（延伸領域）
-  soft_keywords:
-    - <延伸關鍵字 1>
-    - <延伸關鍵字 2>
-
-  cross_platform_bonus: 3
-  default_top_n: 10
-
-  # IG fetch-trends 沒給 seed hashtags 時的 fallback
-  ig_seed_hashtags:
-    - "#<hashtag1>"
-    - "#<hashtag2>"
-
-# ───────────────────────────────────────────────
-# 7. 本地儲存路徑（一般不用改）
+# 6. 本地儲存路徑（一般不用改）
 # ───────────────────────────────────────────────
 storage:
   assets_dir: media/assets
-  reports_dir: reports
-  stats_history_file: data/stats-history.json
+  drafts_dir: reports/drafts
+  posts_dir: reports/posts

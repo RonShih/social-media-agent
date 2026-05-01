@@ -12,22 +12,10 @@
 
 ## 快速開始
 
-```bash
-git clone <repo-url>
-cd social-media-agent
-
-# 1. 複製 settings 模板，改絕對路徑
-cp .claude/settings.example.json .claude/settings.json
-# 編輯 .claude/settings.json：把 <ABSOLUTE_PATH_TO_REPO> 換成此 repo 的真實絕對路徑
-
-# 2. 啟動 Claude
-claude --channels plugin:telegram@claude-plugins-official
-
-# 3. 在 Claude 內依序跑：
-#    /setup              ← 對話式填 brand.yaml
-#    /first-time-login   ← 登入 5 平台社群帳號
-#    /test-post          ← 5 平台 smoke test
-```
+1. **TG bot** — 照 https://code.claude.com/docs/en/channels 設定
+2. **Claude** — `cp .claude/settings.example.json .claude/settings.json`，把 `<ABSOLUTE_PATH_TO_REPO>` 換成此 repo 絕對路徑
+3. **品牌 + 登入** — repo 內跑 `claude`，依序 `/setup` → `/first-time-login`
+4. **上線** — `claude --channels plugin:telegram@claude-plugins-official`，對 TG bot 講話
 
 完整步驟見 [`docs/HOW_TO_USE.md`](./docs/HOW_TO_USE.md)。
 
